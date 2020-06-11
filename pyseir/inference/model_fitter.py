@@ -467,7 +467,7 @@ class ModelFitter:
 
         # If using more future days than allowed, updated not_allowed_days_penalty
         if number_of_not_allowed_days_used > self.days_allowed_beyond_ref:
-            not_allowed_days_penalty = 10 * number_of_not_allowed_days_used
+            not_allowed_days_penalty = 1000 * number_of_not_allowed_days_used
 
         model = self.run_model(**model_kwargs)
         # -----------------------------------
