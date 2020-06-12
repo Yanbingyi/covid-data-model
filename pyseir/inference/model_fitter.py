@@ -343,14 +343,14 @@ class ModelFitter:
         overrides.  As data becomes more sparse, we further constrain the fit,
         which improves stability substantially.
         """
-        log.info("about to SET INFERNECE PARAMS NATASHA")
-        out = subprocess.check_output(["pwd"])
-        log.info(out)
+        # log.info("about to SET INFERNECE PARAMS NATASHA")
+        # out = subprocess.check_output(["pwd"])
+        # log.info(out)
         self.fit_params = self.DEFAULT_FIT_PARAMS
         # Update any state specific params.
-        log.info("about to make initial params df")
+        # log.info("about to make initial params df")
         initial_params_df = pd.read_csv("./pyseir/inference/world_according_to_pyseir.csv")
-        log.info(initial_params_df)
+        # log.info(initial_params_df)
 
         INITIAL_PARAM_SETS = [
             "R0",
@@ -364,15 +364,15 @@ class ModelFitter:
             "log10_I_initial",
         ]
         # log.info(initial_params_pd["fips"])
-        log.info(initial_params_df.dtypes)
-        log.info(type(self.fips))
+        # log.info(initial_params_df.dtypes)
+        # log.info(type(self.fips))
         if int(self.fips) in initial_params_df["fips"]:
-            log.info(f"found fips in csv: self.fips")
+            # log.info(f"found fips in csv: self.fips")
             this_fips_df = initial_params_df.loc[initial_params_df["fips"] == int(self.fips)]
-            log.info(this_fips_df)
+            # log.info(this_fips_df)
             for param in INITIAL_PARAM_SETS:
                 self.fit_params[param] = this_fips_df[param]
-            log.info(self.fit_params)
+            # log.info(self.fit_params)
 
         for k, v in self.PARAM_SETS.items():
             if self.state_obj.abbr in k:
@@ -495,6 +495,7 @@ class ModelFitter:
 
         # If cumulative hospitalizations, differentiate.
         if self.hospitalization_data_type is HospitalizationDataType.CUMULATIVE_HOSPITALIZATIONS:
+            """
             log.info("Natasha this is cumlative hospitalizations")
             hosp_data = (self.hospitalizations[1:] - self.hospitalizations[:-1]).clip(min=0)
             log.info("cumlative hospitalizations")
@@ -503,6 +504,7 @@ class ModelFitter:
             log.info(hosp_data)
             log.info("hosp data max")
             log.info(hosp_data.max)
+            """
 
             hosp_stdev = (
                 self.percent_error_on_max_observation
@@ -510,13 +512,17 @@ class ModelFitter:
                 * hosp_data ** 0.5
                 * hosp_data.max() ** 0.5
             )
+            """
             log.info("hosp stddev not adjusted")
             log.info(hosp_stdev)
+            """
             # Increase errors a bit for very low hospitalizations.
             # There are clear outliers due to data quality.
             hosp_stdev[hosp_data <= 2] *= 3
+            """
             log.info("stddev adjusted hosp")
             log.info(hosp_stdev)
+            """
 
         elif self.hospitalization_data_type is HospitalizationDataType.CURRENT_HOSPITALIZATIONS:
             log.info("Natasha this is current hosp")
@@ -527,17 +533,21 @@ class ModelFitter:
                 * hosp_data ** 0.5
                 * hosp_data.max() ** 0.5
             )
+            """
             log.info("current hospitalizatoins")
             log.info(hosp_data)
             log.info("hosp data max")
             log.info(hosp_data.max())
             log.info("hosp stddev not adjusted")
             log.info(hosp_stdev)
+            """
             # Increase errors a bit for very low hospitalizations.
             # There are clear outliers due to data quality.
             hosp_stdev[hosp_data <= 2] *= 3
+            """
             log.info("stddev adjusted hosp")
             log.info(hosp_stdev)
+            """
         else:
             hosp_stdev = None
 
@@ -614,6 +624,7 @@ class ModelFitter:
         hosp_fraction,
         log10_I_initial,
     ):
+        # log.info('--------------fitting seir-------------------------------------------------------')
         """
         Fit SEIR model by MLE.
 
@@ -673,18 +684,58 @@ class ModelFitter:
         # Chi2 Hospitalizations
         # -----------------------------------
         if self.hospitalization_data_type is HospitalizationDataType.CURRENT_HOSPITALIZATIONS:
+            """
+            log.info('self.hospital_times')
+            log.info(self.hospital_times)
+            log.info('self.t_list')
+            log.info(self.t_list)
+            log.info(f'hosp_fraction: {hosp_fraction}')
+            log.info('hgen')
+            log.info(model.results["HGen"])
+            log.info('hicu')
+            log.info(model.results["HICU"])
+            """
+
             predicted_hosp = hosp_fraction * np.interp(
                 self.hospital_times,
                 self.t_list + t0,
-                model.results["HGen"] + model.results["HICU"],
+                (model.results["HGen"] + model.results["HICU"]),
                 left=0,
                 right=0,
             )
-            # print('getting hospitalizations chi 2 NATASHA')
+            """ 
+            log.info('entire hosp series')
+            log.info(f'hosp_fraction: {hosp_fraction}')
+            log.info('HGEN')
+            log.info(model.results["HGen"])
+            log.info('HICU')
+            log.info(model.results["HICU"])
+            log.info(hosp_fraction*(model.results["HGen"] + model.results["HICU"]))
+            """
+            predicted_hosp1 = np.interp(
+                self.hospital_times,
+                self.t_list + t0,
+                hosp_fraction * (model.results["HGen"] + model.results["HICU"]),
+                left=0,
+                right=0,
+            )
+            """
+            plt.close('all')
+            plt.plot(self.hospital_times, predicted_hosp, label='interpolated prediction', linestyle='--', color = 'green', marker='*')
+            plt.plot(self.t_list+t0, hosp_fraction *(model.results["HGen"] + model.results["HICU"]), label = 'raw model', color = 'yellow')
+            plt.legend()
+            plt.savefig('natashatest_.pdf')
+            plt.close('all')
+            log.info('interpolate')
             log.info("predicted hosp")
             log.info(predicted_hosp)
+            log.info('actual')
+            log.info(self.hospitalizations)
+            """
+
             chi2_hosp = calc_chi_sq(self.hospitalizations, predicted_hosp, self.hosp_stdev)
             self.dof_hosp = (self.observed_new_cases > 0).sum()
+            # log.info(f'hosp_stdev: {self.hosp_stdev} chi2_hosp: {chi2_hosp} eps: {eps} eps2:{eps2} t0: {t0}')
 
         elif self.hospitalization_data_type is HospitalizationDataType.CUMULATIVE_HOSPITALIZATIONS:
             # Cumulative, so differentiate the data
@@ -795,6 +846,11 @@ class ModelFitter:
         minuit.migrad(precision=1e-6)
         self.fit_results = dict(fips=self.fips, **dict(minuit.values))
         self.fit_results.update({k + "_error": v for k, v in dict(minuit.errors).items()})
+        self.fit_results["ramp1_t"] = self.fit_results["t0"] + self.fit_results["t_break"]
+        self.fit_results["ramp2_t"] = (
+            self.fit_results["ramp1_t"] + 14 + self.fit_results["t_delta_phases"]
+        )
+        self.fit_results["ramp2_end"] = self.fit_results["ramp2_t"] + 14
 
         # This just updates chi2 values
         self._fit_seir(**dict(minuit.values))
@@ -814,7 +870,8 @@ class ModelFitter:
                 lower_bound_reff=ModelFitter.REFF_LOWER_BOUND,
             )
             # TODO: Add structured logging if this change is significant
-            self.fit_results[epsilon] = adjusted_epsilon
+            log.info(f"epsilon: {self.fit_results[epsilon]} adjusted_epsilon: {adjusted_epsilon}")
+            # self.fit_results[epsilon] = adjusted_epsilon #Natasha maybe add this back
 
         if np.isnan(self.fit_results["t0"]):
             logging.error(f"Could not compute MLE values for {self.display_name}")
@@ -961,6 +1018,17 @@ class ModelFitter:
                 markersize=10,
             )
             predicted_hosp = self.mle_model.results["HGen"] + self.mle_model.results["HICU"]
+            """
+            log.info('PLOTTING entire hosp series')
+            log.info(f'hosp_fraction: {self.fit_results["hosp_fraction"]}')
+            log.info('HGEN')
+            log.info(self.mle_model.results["HGen"])
+            log.info('HICU')
+            log.info(self.mle_model.results["HICU"])
+            log.info('predicted hosp in plotting')
+            log.info(f'hosp_fraction: {self.fit_results["hosp_fraction"]}')
+            log.info(self.fit_results["hosp_fraction"]*predicted_hosp)
+            """
             plt.plot(
                 model_dates,
                 self.fit_results["hosp_fraction"] * predicted_hosp,
@@ -990,6 +1058,7 @@ class ModelFitter:
 
         plt.yscale("log")
         y_lim = plt.ylim(0.8e0)
+        # y_lim = plt.ylim([400,1000])
 
         start_intervention_date = self.ref_date + timedelta(
             days=self.fit_results["t_break"] + self.fit_results["t0"]
@@ -1112,7 +1181,7 @@ class ModelFitter:
                 )
         plt.text(
             1.05,
-            0.75,
+            0.85,
             f"total_chi2:{chi_total:1.3f}",
             transform=plt.gca().transAxes,
             fontsize=15,
@@ -1163,6 +1232,17 @@ class ModelFitter:
                 try:
                     model_fitter.fit()
                     if model_fitter.mle_model and os.environ.get("PYSEIR_PLOT_RESULTS") == "True":
+                        """
+                        log.info('RETURNED entire hosp series')
+                        log.info(f'hosp_fraction: {model_fitter.mle_model["hosp_fraction"]}')
+                        log.info('HGEN')
+                        log.info(model_fitter.mle_model.results["HGen"])
+                        log.info('HICU')
+                        log.info(model_fitter.mle_model.results["HICU"])
+                        log.info('predicted hosp in plotting')
+                        log.info(f'hosp_fraction: {model_fitter.fit_results["hosp_fraction"]}')
+                        log.info(model_fitter.fit_results["hosp_fraction"]*predicted_hosp)
+                        """
                         model_fitter.plot_fitting_results()
                 except RuntimeError as e:
                     logging.warning("No convergence.. Retrying " + str(e))
