@@ -17,6 +17,7 @@ on:
 
 env:
   # !!! Change this to your BRANCH if you want to test it
+  #change this back
   COVID_DATA_MODEL_REF: 'feature/tune-seir-state-initial-conditions'
 
   # To pin to an old data sets, put the branch/tag/commit here:
